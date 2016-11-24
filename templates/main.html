@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Codin Blog</title>
+</head>
+<body>
+	<h1>Welcome to the Codin Blog</h1>
+	
+	<hr>
+
+	<ul>
+		{% for e in enteries %}
+			<li>
+				<div>
+					{{e.title}}
+				</div>
+				<pre>
+					{{e.code}}
+				</pre>
+					
+			</li>
+		{% endfor %}
+			
+	</ul>
+		
+		
+	
+	
+	
+
+</body>
+</html>
