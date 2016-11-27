@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Codin Blog | Sign Up</title>
+</head>
+<body>
+	<h2>Please Register below:</h2>
+	<form method="post">
+		<div>
+			Username:
+			<input type="text" name="username" value="{{username}}">
+			{{error_username}}
+		</div>
+		<div>
+			Password:
+			<input type="password" name="password">
+			{{error_password}}
+		</div>
+		<div>
+			Verify:
+			<input type="password" name="verify">
+			{{error_verify}}
+		</div>
+		<div>
+			Email:
+			<input type="email" name="email" value="{{email}}">
+			{{error_email}}
+		</div>
+		<input type="submit" name="submit">
+	</form>
+
+</body>
+</html>

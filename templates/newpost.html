@@ -6,10 +6,13 @@
 <body>
 	<form method="post">
 		<h3>Title</h3>
-		<input type="text" name="title"><br>
+		<input type="text" name="subject"><br>
 		<h3>Code Entery</h3>
-		<textarea name="code" rows="25" cols="75"></textarea>
+		<textarea name="content" rows="25" cols="75"></textarea>
 		<br>
+		<div>
+			{{error_message}}
+		</div>
 		<input type="submit" name="">
 	</form>
 
