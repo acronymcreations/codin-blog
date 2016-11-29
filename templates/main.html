@@ -1,32 +1,19 @@
-<!DOCTYPE html>
-<html>
-<head>
-	<title>Codin Blog</title>
-</head>
-<body>
-	<h1>Welcome to the Codin Blog</h1>
+{% import 'post_block.html' as temp %}
 	
-	<hr>
+	
+{% extends 'base.html' %}
 
-	<ul>
+{% block content %}
 		{% for e in enteries %}
-			<li>
-				<div>
-					{{e.title}}
-				</div>
-				<pre>
-					{{e.code}}
-				</pre>
-					
-			</li>
-		{% endfor %}
 			
-	</ul>
+			{{ temp.post(e) }}
+					
+			
+		{% endfor %}
+				
 		
-		
 	
-	
-	
+<!-- </body>
+</html> -->
 
-</body>
-</html>
+{% endblock %}

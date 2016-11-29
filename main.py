@@ -61,16 +61,16 @@ class Handler(webapp2.RequestHandler):
 
     def set_secure_cookie(self,user_id):
         hash_id = self.hash_str(user_id)
-        self.response.headers.add_header('Set-Cookie','%s|%s'%(user_id,hash_id))
+        self.response.headers.add_header('Set-Cookie','user_id=%s|%s;PATH=/'%(user_id,hash_id))
 
     
 
 
 class MainHandler(Handler):
     def get(self):
-    	enteries = db.GqlQuery('select * from codeobject order by created desc')
-        self.render('main.html',enteries = enteries)
-        mgw = self.request.cookies.get('MGW','false')
+        u = self.check_id_cookie()
+    	enteries = db.GqlQuery('select * from PostObject order by created desc')
+        self.render('main.html',enteries = enteries,user = u)
 
 
 
@@ -93,6 +93,10 @@ class Signup(Handler):
         params = {'username':username}
         valid_form = True
 
+        already_exists = db.GqlQuery("select * from User where username = '%s'"%username).get()
+        if already_exists:
+            params['error_username'] = 'Username is already taken'
+            valid_form = False
         if not valid_username(username):
             params['error_username'] = 'Username is too short'
             valid_form = False
@@ -113,62 +117,104 @@ class Signup(Handler):
             new_user_key = new_user.put()
             user_id = new_user_key.id()
             id_hash = self.hash_str(user_id)
-            self.response.headers.add_header('Set-Cookie',str('user_id=%s|%s; PATH=/'%(user_id,id_hash)))
+            self.set_secure_cookie(user_id)
             self.redirect('/welcome')
         else:
             self.render('signup.html',**params)
 
 
 
-# class Login(Handler):
-#     def get(self):
+class Login(Handler):
+    def get(self):
+        user_id = self.check_id_cookie()
+        if user_id:
+            self.redirect('/welcome')
+        self.render('/login.html')
+
+    def post(self):
+        username = self.request.get('username')
+        password = self.request.get('password')
+        u = db.GqlQuery("select * from User where username = '%s'"%username).get()
+        if u:
+            if self.hash_str(password) == u.password:
+                logging.info('user is authenticated')
+                self.set_secure_cookie(u.key().id())
+                self.redirect('/welcome')
+            else:
+                self.render('login.html',username = username,error = 'Invalid username and/or password')
+
+        else:
+            self.render('login.html',username = username,error = 'Invalid username and/or password')
         
 
-
+class Logout(Handler):
+    def get(self):
+        self.response.headers.add_header('Set-Cookie','user_id=;PATH=/')
+        self.redirect('/login')
 
 
 class Welcome(Handler):
     def get(self):
         u = self.check_id_cookie()
         if u:
-            self.render('welcome.html',user = u.username)
+            posts = db.GqlQuery("select * from PostObject where posted_by = '%s' order by created desc"%u.username).fetch(limit=None)
+            self.render('welcome.html',user = u,posts = posts)
         else:
-            self.redirect('/signup')
+            self.redirect('/login')
 
+class PostsBy(Handler):
+    def get(self,poster):
+        user = self.check_id_cookie()
+        logging.info("posts by method ran")
+        posts = db.GqlQuery("select * from PostObject where posted_by = '%s' order by created desc"%poster).fetch(limit=None)
+        self.render('postsby.html',posts = posts,user = user,poster = poster)
 
 
     
 class NewPost(Handler):
     def get(self):
-        self.render('newpost.html')
+        u = self.check_id_cookie()
+        if u:
+            self.render('newpost.html')
+        else:
+            self.redirect('/login')
 
     def post(self):
         title = self.request.get('subject')
+        summary = self.request.get('summary')
         code = self.request.get('content')
-        if title and code:
-            new_entery = codeobject(title = title, code = code)
+        u = self.check_id_cookie();
+        if title and code and summary and u:
+            new_entery = PostObject(title = title,summary = summary,code = code,posted_by = u.username)
             key = new_entery.put()
             entry_id = '/' + str(key.id())
             logging.info(entry_id)
             self.redirect(entry_id)
         else:
             logging.info('Error with post')
-            self.render('newpost.html',error_message = 'Both a title and code is required!')
+            self.render('newpost.html',error_message = 'All fields are required!',title = title,summary = summary,code = code)
 
 
 
 class Entery(Handler):
     def get(self,post_id):
-        entery = codeobject.get_by_id(int(post_id))
+        u = self.check_id_cookie()
+        entry = PostObject.get_by_id(int(post_id))
 
-        self.render('entery.html',entery = entery)
+        self.render('entery.html',entry = entry,user = u)
 
+class CommentObject(db.Model):
+    comment = db.TextProperty(required = True)
+    post_id = db.IntegerProperty(required = True)
+    poster_id = db.IntegerProperty(required = True)
+    created = db.DateTimeProperty(auto_now = True)
 
-
-class codeobject(db.Model):
+class PostObject(db.Model):
     title = db.StringProperty(required = True)
+    summary = db.TextProperty(required = True)
     code = db.TextProperty(required = True)
-    created = db.DateTimeProperty(auto_now_add = True)
+    posted_by = db.StringProperty(required = True)
+    created = db.DateTimeProperty(auto_now = True)
 
 class User(db.Model):
     username = db.StringProperty(required = True)
@@ -181,7 +227,10 @@ app = webapp2.WSGIApplication([
     ('/newpost',NewPost),
     ('/([0-9]+)',Entery),
     ('/signup',Signup),
-    ('/welcome',Welcome)
+    ('/welcome',Welcome),
+    ('/login',Login),
+    ('/logout',Logout),
+    ('/postsby/([a-zA-Z0-9_-]+)',PostsBy)
 ], debug=True)
 
 
