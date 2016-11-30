@@ -26,12 +26,7 @@ def valid_password(password):
 def valid_email(email):
     e = re.compile(r"^[\S]+@[\S]+.[\S]+$")
     return email and e.match(email)
-
-
-
-
-    
-
+  
 class Handler(webapp2.RequestHandler):
     def write(self,*a,**kw):
         self.response.out.write(*a,**kw)
@@ -63,16 +58,11 @@ class Handler(webapp2.RequestHandler):
         hash_id = self.hash_str(user_id)
         self.response.headers.add_header('Set-Cookie','user_id=%s|%s;PATH=/'%(user_id,hash_id))
 
-    
-
-
 class MainHandler(Handler):
     def get(self):
         u = self.check_id_cookie()
     	enteries = db.GqlQuery('select * from PostObject order by created desc')
         self.render('main.html',enteries = enteries,user = u)
-
-
 
 class Signup(Handler):
     def get(self):
@@ -122,8 +112,6 @@ class Signup(Handler):
         else:
             self.render('signup.html',**params)
 
-
-
 class Login(Handler):
     def get(self):
         user_id = self.check_id_cookie()
@@ -146,12 +134,10 @@ class Login(Handler):
         else:
             self.render('login.html',username = username,error = 'Invalid username and/or password')
         
-
 class Logout(Handler):
     def get(self):
         self.response.headers.add_header('Set-Cookie','user_id=;PATH=/')
         self.redirect('/login')
-
 
 class Welcome(Handler):
     def get(self):
@@ -168,9 +154,7 @@ class PostsBy(Handler):
         logging.info("posts by method ran")
         posts = db.GqlQuery("select * from PostObject where posted_by = '%s' order by created desc"%poster).fetch(limit=None)
         self.render('postsby.html',posts = posts,user = user,poster = poster)
-
-
-    
+   
 class NewPost(Handler):
     def get(self):
         u = self.check_id_cookie()
@@ -194,8 +178,6 @@ class NewPost(Handler):
             logging.info('Error with post')
             self.render('newpost.html',error_message = 'All fields are required!',title = title,summary = summary,code = code)
 
-
-
 class Entery(Handler):
     def get(self,post_id):
         u = self.check_id_cookie()
@@ -207,14 +189,14 @@ class CommentObject(db.Model):
     comment = db.TextProperty(required = True)
     post_id = db.IntegerProperty(required = True)
     poster_id = db.IntegerProperty(required = True)
-    created = db.DateTimeProperty(auto_now = True)
+    created = db.DateTimeProperty(auto_now_add = True)
 
 class PostObject(db.Model):
     title = db.StringProperty(required = True)
     summary = db.TextProperty(required = True)
     code = db.TextProperty(required = True)
     posted_by = db.StringProperty(required = True)
-    created = db.DateTimeProperty(auto_now = True)
+    created = db.DateTimeProperty(auto_now_add = True)
 
 class User(db.Model):
     username = db.StringProperty(required = True)
