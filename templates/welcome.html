@@ -1,19 +1,10 @@
-{% import 'post_block.html' as temp %}
-{% extends 'base.html' %}
-
-{% block content %}
-
-
-	<a class="all" href="/newpost">New Post</a>
-	<h2 class="all">Your Recent Posts:</h2>
-	{% for e in posts %}
-	
-		{{ temp.post(e) }}
-
-	{% endfor %}
-
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Codin Blog | Welcome</title>
+</head>
+<body>
+	<h1>Welcome {{user}}</h1>
 
 </body>
 </html>
-
-{% endblock %}

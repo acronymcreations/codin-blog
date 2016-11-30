@@ -56,13 +56,13 @@ class Handler(webapp2.RequestHandler):
 
     def set_secure_cookie(self,user_id):
         hash_id = self.hash_str(user_id)
-        self.response.headers.add_header('Set-Cookie','user_id=%s|%s;PATH=/'%(user_id,hash_id))
+        self.response.headers.add_header('Set-Cookie','%s|%s'%(user_id,hash_id))
 
 class MainHandler(Handler):
     def get(self):
-        u = self.check_id_cookie()
-    	enteries = db.GqlQuery('select * from PostObject order by created desc')
-        self.render('main.html',enteries = enteries,user = u)
+    	enteries = db.GqlQuery('select * from codeobject order by created desc')
+        self.render('main.html',enteries = enteries)
+        mgw = self.request.cookies.get('MGW','false')
 
 class Signup(Handler):
     def get(self):
@@ -83,10 +83,6 @@ class Signup(Handler):
         params = {'username':username}
         valid_form = True
 
-        already_exists = db.GqlQuery("select * from User where username = '%s'"%username).get()
-        if already_exists:
-            params['error_username'] = 'Username is already taken'
-            valid_form = False
         if not valid_username(username):
             params['error_username'] = 'Username is too short'
             valid_form = False
@@ -107,11 +103,12 @@ class Signup(Handler):
             new_user_key = new_user.put()
             user_id = new_user_key.id()
             id_hash = self.hash_str(user_id)
-            self.set_secure_cookie(user_id)
+            self.response.headers.add_header('Set-Cookie',str('user_id=%s|%s; PATH=/'%(user_id,id_hash)))
             self.redirect('/welcome')
         else:
             self.render('signup.html',**params)
 
+<<<<<<< HEAD
 class Login(Handler):
     def get(self):
         user_id = self.check_id_cookie()
@@ -138,16 +135,25 @@ class Logout(Handler):
     def get(self):
         self.response.headers.add_header('Set-Cookie','user_id=;PATH=/')
         self.redirect('/login')
+=======
+
+
+# class Login(Handler):
+#     def get(self):
+        
+
+
+>>>>>>> parent of e6aefb3... Standardized all pages using templates and macros
 
 class Welcome(Handler):
     def get(self):
         u = self.check_id_cookie()
         if u:
-            posts = db.GqlQuery("select * from PostObject where posted_by = '%s' order by created desc"%u.username).fetch(limit=None)
-            self.render('welcome.html',user = u,posts = posts)
+            self.render('welcome.html',user = u.username)
         else:
-            self.redirect('/login')
+            self.redirect('/signup')
 
+<<<<<<< HEAD
 class PostsBy(Handler):
     def get(self,poster):
         user = self.check_id_cookie()
@@ -155,47 +161,51 @@ class PostsBy(Handler):
         posts = db.GqlQuery("select * from PostObject where posted_by = '%s' order by created desc"%poster).fetch(limit=None)
         self.render('postsby.html',posts = posts,user = user,poster = poster)
    
+=======
+
+
+    
+>>>>>>> parent of e6aefb3... Standardized all pages using templates and macros
 class NewPost(Handler):
     def get(self):
-        u = self.check_id_cookie()
-        if u:
-            self.render('newpost.html')
-        else:
-            self.redirect('/login')
+        self.render('newpost.html')
 
     def post(self):
         title = self.request.get('subject')
-        summary = self.request.get('summary')
         code = self.request.get('content')
-        u = self.check_id_cookie();
-        if title and code and summary and u:
-            new_entery = PostObject(title = title,summary = summary,code = code,posted_by = u.username)
+        if title and code:
+            new_entery = codeobject(title = title, code = code)
             key = new_entery.put()
             entry_id = '/' + str(key.id())
             logging.info(entry_id)
             self.redirect(entry_id)
         else:
             logging.info('Error with post')
-            self.render('newpost.html',error_message = 'All fields are required!',title = title,summary = summary,code = code)
+            self.render('newpost.html',error_message = 'Both a title and code is required!')
 
 class Entery(Handler):
     def get(self,post_id):
-        u = self.check_id_cookie()
-        entry = PostObject.get_by_id(int(post_id))
+        entery = codeobject.get_by_id(int(post_id))
 
-        self.render('entery.html',entry = entry,user = u)
+        self.render('entery.html',entery = entery)
 
+<<<<<<< HEAD
 class CommentObject(db.Model):
     comment = db.TextProperty(required = True)
     post_id = db.IntegerProperty(required = True)
     poster_id = db.IntegerProperty(required = True)
     created = db.DateTimeProperty(auto_now_add = True)
+=======
+>>>>>>> parent of e6aefb3... Standardized all pages using templates and macros
 
-class PostObject(db.Model):
+
+class codeobject(db.Model):
     title = db.StringProperty(required = True)
-    summary = db.TextProperty(required = True)
     code = db.TextProperty(required = True)
+<<<<<<< HEAD
     posted_by = db.StringProperty(required = True)
+=======
+>>>>>>> parent of e6aefb3... Standardized all pages using templates and macros
     created = db.DateTimeProperty(auto_now_add = True)
 
 class User(db.Model):
@@ -209,10 +219,7 @@ app = webapp2.WSGIApplication([
     ('/newpost',NewPost),
     ('/([0-9]+)',Entery),
     ('/signup',Signup),
-    ('/welcome',Welcome),
-    ('/login',Login),
-    ('/logout',Logout),
-    ('/postsby/([a-zA-Z0-9_-]+)',PostsBy)
+    ('/welcome',Welcome)
 ], debug=True)
 
 

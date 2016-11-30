@@ -10,12 +10,6 @@ indexes:
 # automatically uploaded to the admin console when you next deploy
 # your application using appcfg.py.
 
-- kind: PostObject
-  properties:
-  - name: posted_by
-  - name: created
-    direction: desc
-
 - kind: User
   properties:
   - name: ID

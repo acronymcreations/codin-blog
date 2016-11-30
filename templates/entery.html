@@ -1,9 +1,13 @@
-{% extends 'base.html' %}
-
-{% block content %}
-	
-	{% import 'post_block.html' as temp %}
-	
-	{{ temp.post(entry) }}
-
-{% endblock %}
+<!DOCTYPE html>
+<html>
+<head>
+	<title></title>
+</head>
+<body>
+	<h1><a href="/">Codin Blog</a></h1>
+	<h3>{{entery.title}}</h3>
+	<pre>
+		{{entery.code}}
+	</pre>
+</body>
+</html>

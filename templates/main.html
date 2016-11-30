@@ -1,14 +1,35 @@
-{% import 'post_block.html' as temp %}
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Codin Blog</title>
+</head>
+<body>
+	<h1>Welcome to the Codin Blog</h1>
 	
-	
-{% extends 'base.html' %}
+	<hr>
 
-{% block content %}
+	<ul>
 		{% for e in enteries %}
-			
-			{{ temp.post(e) }}
+			<li>
+				<div>
+					{{e.title}}
+				</div>
+				<pre>
+					{{e.code}}
+				</pre>
 					
-			
+			</li>
 		{% endfor %}
+<<<<<<< HEAD
+=======
+			
+	</ul>
+		
+		
+	
+	
+	
+>>>>>>> parent of e6aefb3... Standardized all pages using templates and macros
 
-{% endblock %}
+</body>
+</html>

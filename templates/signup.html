@@ -1,29 +1,33 @@
-{% extends 'base.html' %}
-
-{% block content %}
-	<h2 class="all">Please Register below:</h2>
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Codin Blog | Sign Up</title>
+</head>
+<body>
+	<h2>Please Register below:</h2>
 	<form method="post">
-		<div class="all">
+		<div>
 			Username:
-			<input class="" type="text" name="username" value="{{username}}">
+			<input type="text" name="username" value="{{username}}">
 			{{error_username}}
 		</div>
-		<div class="all">
+		<div>
 			Password:
 			<input type="password" name="password">
 			{{error_password}}
 		</div>
-		<div class="all">
+		<div>
 			Verify:
 			<input type="password" name="verify">
 			{{error_verify}}
 		</div>
-		<div class="all">
+		<div>
 			Email:
 			<input type="email" name="email" value="{{email}}">
 			{{error_email}}
-		</div><br>
+		</div>
 		<input type="submit" name="submit">
 	</form>
 
-{% endblock %}
+</body>
+</html>
