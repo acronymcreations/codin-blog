@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Codin Blog</title>
+	<link rel="stylesheet" type="text/css" href="../css/main_styles.css" />
+</head>
+<body class="container">
+	<div class="quarter">
+		<img src="http://placehold.it/60x60">
+	</div>
+	<h1 class="half text-center">Codin Blog</h1>
+	<h4 class="quarter text-right">
+		{% if user %}
+		<a href="/welcome">Welcome {{user.username}}</a><br>
+		<a href="/logout">logout</a>
+		{% else %}
+		<a href="/login">Login</a> / <a href="/signup">Signup</a>
+		{% endif %}
+	</h4>
+	
+		<hr class="all">
+
+		{% block content %}
+		{% endblock %}
+
+</body>
+</html>

@@ -1,20 +1,10 @@
-<!DOCTYPE html>
-<html>
-<head>
-	<title>Codin Blog-New Post</title>
-</head>
-<body>
-	<form method="post">
-		<h3>Title</h3>
-		<input type="text" name="subject"><br>
-		<h3>Code Entery</h3>
-		<textarea name="content" rows="25" cols="75"></textarea>
-		<br>
-		<div>
-			{{error_message}}
-		</div>
-		<input type="submit" name="">
-	</form>
+{% import 'post_block.html' as temp %}
+	
+	
+{% extends 'base.html' %}
 
-</body>
-</html>
+{% block content %}
+		{{ temp.editpost(title,summary,code,error_message) }}
+
+{% endblock %}
+	

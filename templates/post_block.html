@@ -2,7 +2,7 @@
     <input type="{{ type }}" value="{{ value|e }}" name="{{ name }}">
 {%- endmacro %} -->
 
-{% macro post(e) -%}
+{% macro post(e,user) -%}
 
 <section class="half title"><a href="/{{e.key().id()}}">{{e.title}}</a></section> 
 <section class="half text-right">
@@ -15,15 +15,32 @@
 
 <pre class="all" id="code">{{e.code}}</pre>
 
-<!-- {% if e.posted_by == user.username %}
-<a href="/newpost"></a>
-
-{% endif %} -->
+{% if user and e.posted_by == user.username %}
+	<a href="/edit/{{e.key().id()}}" class="half">edit post</a>
+	<a href="/delete/{{e.key().id()}}" class="half text-right">delete post</a>
+{% else %}
+	<a class="half" href="/like/{{e.key().id()}}">like</a>
+	<section class="half text-right">{{ e.likes|length }} likes</section>
+{% endif %}
 <hr class="all">
 
 {%- endmacro %}
 
 
-{% macro example(e) -%}
-<section>{{e.summary}}</section>
+{% macro editpost(title='',summary='',code='',error_message='') -%}
+
+<form method="post">
+	<h3>Title</h3>
+	<input id="title" type="text" name="subject" value="{{title}}"><br>
+	<h3>Summary</h3>
+	<textarea type="text" name="summary" rows="10" cols="75">{{summary}}</textarea>
+	<h3>Code</h3>
+	<textarea name="content" rows="25" cols="75">{{code}}</textarea>
+	<br>
+	<div>
+		{{error_message}}
+	</div>
+	<input type="submit" name="">
+</form>
+
 {%- endmacro %}
