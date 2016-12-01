@@ -2,18 +2,11 @@
 {% extends 'base.html' %}
 
 {% block content %}
-	<h2 class="all">Posts by {{poster}}</h2>
 	
 	{% for e in posts %}
 			
-		
-	
-		{{ temp.post(e,user) }}
-				
+		{{ temp.summarypost(e,user) }}	
 		
 	{% endfor %}
-
-</body>
-</html>
 
 {% endblock %}

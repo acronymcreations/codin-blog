@@ -2,11 +2,14 @@
 <html>
 <head>
 	<title>Codin Blog</title>
+	<link href="https://fonts.googleapis.com/css?family=Sahitya|Source+Code+Pro" rel="stylesheet">
 	<link rel="stylesheet" type="text/css" href="../css/main_styles.css" />
 </head>
 <body class="container">
 	<div class="quarter">
-		<img src="http://placehold.it/60x60">
+		<a href="/">
+			<img src="http://placehold.it/60x60">
+		</a>
 	</div>
 	<h1 class="half text-center">Codin Blog</h1>
 	<h4 class="quarter text-right">
@@ -18,7 +21,18 @@
 		{% endif %}
 	</h4>
 	
-		<hr class="all">
+	<hr class="all">
+	<h4 class="third">
+		<a href="/newpost">New Post</a><br>
+	</h4>
+	<h4 class="third text-center">
+		<a href="/recentposts">Recently Viewed</a>
+	</h4>
+	<h4 class="third text-right">
+		<a href="/likedposts">Liked Posts</a>
+	</h4>
+	<hr class="all">
+	<h2 class="all">{{title}}</h2>
 
 		{% block content %}
 		{% endblock %}

@@ -5,9 +5,24 @@
 	}
 }
 
+*{
+	font-family: 'Sahitya', serif;
+	background-image: url("background.png");
+}
+
 h1{
 	margin-top: 10px;
 	margin-bottom: 10px;
+	
+}
+h4{
+	font-family: 'Sahitya', serif;
+	margin-top: 5px;
+	margin-bottom: 5px;
+}
+
+textarea,input[type=text],input[type=password]{
+	background: white;
 }
 
 .container{
@@ -32,6 +47,42 @@ h1{
 	width: 25%;
 }
 
+.third{
+	width: 33.3333%;
+}
+
+.three-quarter{
+	width: 75%
+}
+
+.title{
+	font-size: 2em;
+}
+
+.summary{
+	font-size: 1.25em;
+	margin-top:0px;
+}
+
+.code{
+	background: #e6e6e6;
+	font-family: 'Source Code Pro', monospace;
+	
+}
+
+.comment{
+	font-size: 1.2em
+}
+
+.delete-button,.edit-button,.like-button{
+	font-size: 0.9em;
+	padding: 0px;
+}
+
+.submit-button,.comment-button{
+	font-size: 0.9em
+}
+
 .text-right{
 	text-align: right;
 }
@@ -40,15 +91,5 @@ h1{
 	text-align: center;
 }
 
-.title{
-	font-size: 2em;
-}
 
-#summary{
-	font-style: italic;
-}
 
-#code{
-	background: #e6e6e6;
-	
-}

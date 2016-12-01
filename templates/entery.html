@@ -3,7 +3,13 @@
 {% block content %}
 	
 	{% import 'post_block.html' as temp %}
+
+	{{ temp.summarypost(e,user) }}
 	
-	{{ temp.post(entry,user) }}
+	{{ temp.post(e,user) }}
+
+	
+	{{temp.comment(e,comments,user,comment_id)}}
+	
 
 {% endblock %}

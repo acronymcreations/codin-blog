@@ -4,10 +4,11 @@
 {% extends 'base.html' %}
 
 {% block content %}
-	{% for e in enteries %}
-		
-		{{ temp.summarypost(e,user) }}
-				
-	{% endfor %}
+		{% for e in posts %}
+			
+			{{ temp.summarypost(e,user) }}
+					
+			
+		{% endfor %}
 
 {% endblock %}

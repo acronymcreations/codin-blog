@@ -57,13 +57,26 @@ class Handler(webapp2.RequestHandler):
         hash_id = self.hash_str(user_id)
         self.response.headers.add_header('Set-Cookie','user_id=%s|%s;PATH=/'%(user_id,hash_id))
 
+    def read_recent_cookie(self):
+        cookie = self.request.cookies.get('recent')
+        if cookie is not None:
+            posts = cookie.split('|')
+            return posts
+
+    def add_recent_post(self,post):
+        cookie_a = self.read_recent_cookie()
+        if cookie_a is None:
+            cookie = post
+        elif not post in cookie_a:
+            cookie = self.request.cookies.get('recent')
+            cookie = str(cookie + '|' + post)  
+        self.response.headers.add_header('Set-Cookie','recent=%s;PATH=/'%cookie)
+
 class MainHandler(Handler):
     def get(self):
         u = self.check_id_cookie()
-    	enteries = db.GqlQuery('select * from PostObject order by created desc')
-        logging.info(enteries[0].likes)
-        logging.info(len(enteries[0].likes))
-        self.render('main.html',enteries = enteries, user = u)
+    	enteries = db.GqlQuery('select * from PostObject order by created desc').fetch(10)
+        self.render('main.html',enteries = enteries, user = u,title = 'Recent Posts:')
 
 class Signup(Handler):
     def get(self):
@@ -153,7 +166,7 @@ class PostsBy(Handler):
     def get(self,poster):
         user = self.check_id_cookie()
         posts = db.GqlQuery("select * from PostObject where posted_by = '%s' order by created desc"%poster).fetch(limit=None)
-        self.render('postsby.html',posts = posts,user = user,poster = poster)
+        self.render('postsby.html',posts = posts,user = user,title = 'Posts by '+poster)
    
 class NewPost(Handler):
     def get(self):
@@ -166,15 +179,15 @@ class NewPost(Handler):
     def post(self):
         u = self.check_id_cookie();
         if not u:
-            redirect('/login')
+            self.redirect('/login')
         title = self.request.get('subject')
         summary = self.request.get('summary')
         code = self.request.get('content')
         
         if title and code and summary:
-            new_entery = PostObject(title = title,summary = summary,code = code,posted_by = u.username)
+            new_entery = PostObject(title = title,summary = summary,code = code,posted_by = u.username,likes = [])
             key = new_entery.put()
-            entry_id = '/' + str(key.id())
+            entry_id = '/' + str(key.id()) + '/0'
             logging.info(entry_id)
             self.redirect(entry_id)
         else:
@@ -204,44 +217,113 @@ class EditPost(Handler):
             e.code = code
             e.posted_by = u.username
             e.put()
-            self.redirect('../'+post_id)
+            self.redirect('../'+post_id+'/0')
         else:
             self.render('newpost.html',error_message = 'All fields are required!',title = title,summary = summary,code = code,user = u)
 
 class DeletePost(Handler):
-    def get(self,post_id):
+    def post(self,type,post_id):
         u = self.check_id_cookie()
         if not u:
             redirect('/login')
-        e = PostObject.get_by_id(int(post_id))
-        e.delete()
-        time.sleep(0.4)
-        self.redirect('/welcome')
+        o = None
+        e = False
+        if type == 'post':
+            o = PostObject.get_by_id(int(post_id))
+            comments = db.GqlQuery("select * from CommentObject where post_id = '%s'"%post_id).fetch(limit=None)
+            for c in comments:
+                c.delete()
+        elif type == 'comment':
+            o = CommentObject.get_by_id(int(post_id))
+            e = PostObject.get_by_id(int(o.post_id))
+        o.delete()
+        time.sleep(0.3)
+        if e:
+            self.redirect('/'+str(e.key().id())+'/0')
+        else:
+            self.redirect('/welcome')
 
 class LikePost(Handler):
-    def get(self,post_id):
+    def post(self,type,object_id):
         u = self.check_id_cookie()
         if not u:
             self.redirect('/login')
-        e = PostObject.get_by_id(int(post_id))
-        if u.username in e.likes:
-            e.likes.remove(u.username)
+        o = None
+        e = False
+        if type == 'post':
+            o = PostObject.get_by_id(int(object_id))
+        elif type == 'comment':
+            o = CommentObject.get_by_id(int(object_id))
+            e = PostObject.get_by_id(int(o.post_id))
+        if u.username in o.likes:
+            o.likes.remove(u.username)
+            u.likes.remove(str(object_id))
         else:
-            e.likes.append(u.username)
-        e.put()
-        # self.redirect('/')
+            o.likes.append(u.username)
+            u.likes.append(str(object_id))
+        o.put()
+        u.put()
+        time.sleep(0.3)
+        if e:
+            self.redirect('/'+str(e.key().id())+'/0')
+        else:
+            self.redirect('/'+object_id+'/0')
 
-class Entery(Handler):
-    def get(self,post_id):
+class LikedPosts(Handler):
+    def get(self):
         u = self.check_id_cookie()
-        entry = PostObject.get_by_id(int(post_id))
+        if u is None:
+            logging.info("checked for none and found none")
+            self.redirect('/login')
+            return None
+        posts = u.likes
+        entries = []
+        for post in posts:
+            entries.append(PostObject.get_by_id(int(post)))
+            logging.info(entries)
+        self.render('/main.html',enteries = entries, user = u,title = 'Liked Posts:')
 
-        self.render('entery.html',entry = entry,user = u)
+class RecentPosts(Handler):
+    def get(self):
+        u = self.check_id_cookie()
+        posts = self.read_recent_cookie()
+        entries = []
+        if posts is not None:
+            for post in posts:
+                entries.append(PostObject.get_by_id(int(post)))
+                logging.info(entries)
+        self.render('/main.html',enteries = entries, user = u,title = 'Recently Viewed:')
+        
+class Entery(Handler):
+    def get(self,post_id,comment_id):
+        u = self.check_id_cookie()
+        self.add_recent_post(str(post_id))
+        e = PostObject.get_by_id(int(post_id))
+        comments = db.GqlQuery("select * from CommentObject where post_id = '%s' order by created"%post_id).fetch(limit=None)
+        self.render('entery.html',e = e,user = u,comments = comments,comment_id = int(comment_id))
+
+    def post(self,post_id,comment_id):
+        u = self.check_id_cookie()
+        if not u:
+            self.redirect('/login')
+        comment = self.request.get('comment')
+        if comment:
+            if comment_id == 0:
+                c = CommentObject(comment = comment, post_id = post_id, posted_by = u.username, likes = [])
+                c.put()
+                time.sleep(.3)
+            else:
+                c = CommentObject.get_by_id(int(comment_id))
+                c.comment = comment
+                c.put()
+                time.sleep(0.3)
+        self.redirect('/'+post_id+'/0')
 
 class CommentObject(db.Model):
     comment = db.TextProperty(required = True)
-    post_id = db.IntegerProperty(required = True)
-    poster_id = db.IntegerProperty(required = True)
+    post_id = db.StringProperty(required = True)
+    posted_by = db.StringProperty(required = True)
+    likes = db.StringListProperty(required = True)
     created = db.DateTimeProperty(auto_now_add = True)
 
 class PostObject(db.Model):
@@ -262,15 +344,17 @@ class User(db.Model):
 app = webapp2.WSGIApplication([
     ('/', MainHandler),
     ('/newpost',NewPost),
-    ('/([0-9]+)',Entery),
+    ('/([0-9]+)/([0-9]+)',Entery),
     ('/signup',Signup),
     ('/welcome',Welcome),
     ('/login',Login),
     ('/logout',Logout),
     ('/postsby/([a-zA-Z0-9_-]+)',PostsBy),
     ('/edit/([0-9]+)',EditPost),
-    ('/delete/([0-9]+)',DeletePost),
-    ('/like/([0-9]+)',LikePost)
+    ('/delete/([a-z]+)/([0-9]+)',DeletePost),
+    ('/like/([a-z]+)/([0-9]+)',LikePost),
+    ('/likedposts',LikedPosts),
+    ('/recentposts',RecentPosts)
 ], debug=True)
 
 

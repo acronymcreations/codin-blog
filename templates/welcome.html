@@ -3,12 +3,9 @@
 
 {% block content %}
 
-
-	<a class="all" href="/newpost">New Post</a>
-	<h2 class="all">Your Recent Posts:</h2>
 	{% for e in posts %}
 	
-		{{ temp.post(e,user) }}
+		{{ temp.summarypost(e,user) }}
 
 	{% endfor %}
 

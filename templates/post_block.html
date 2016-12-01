@@ -1,27 +1,114 @@
-<!-- {% macro input(name, value='', type='text') -%}
-    <input type="{{ type }}" value="{{ value|e }}" name="{{ name }}">
-{%- endmacro %} -->
 
 {% macro post(e,user) -%}
 
-<section class="half title"><a href="/{{e.key().id()}}">{{e.title}}</a></section> 
-<section class="half text-right">
-	Posted By <a href="/postsby/{{e.posted_by}}">{{e.posted_by}}</a><br>
-	{{e.created.strftime('%b %d, %Y')}}
-</section> 
-<section id="summary">
-	{{e.summary}}
-</section>
+<pre class="all code">{{e.code}}</pre>
 
-<pre class="all" id="code">{{e.code}}</pre>
 
 {% if user and e.posted_by == user.username %}
-	<a href="/edit/{{e.key().id()}}" class="half">edit post</a>
-	<a href="/delete/{{e.key().id()}}" class="half text-right">delete post</a>
-{% else %}
-	<a class="half" href="/like/{{e.key().id()}}">like</a>
-	<section class="half text-right">{{ e.likes|length }} likes</section>
+	<form action="/edit/{{e.key().id()}}" class="half">
+		<input type="submit" value="edit" class="edit-button">
+	</form>
+	<form method="post" action="/delete/post/{{e.key().id()}}" class="text-right half">
+		<input type="submit" value="delete" class="delete-button">
+	</form>
+	
+{% elif user and user.username in e.likes %}
+	
+	<form action="/like/post/{{e.key().id()}}" method="post">
+		<input type="submit" name="like" value="unlike" class="like-button">
+	</form>
+		
+{% elif user and user.username not in e.likes %}
+	
+	<form action="/like/post/{{e.key().id()}}" method="post">
+		<input type="submit" name="like" value="like" class="like-button">
+	</form>
+	
 {% endif %}
+
+<hr class="all">
+
+{%- endmacro %}
+
+
+
+
+{%- macro comment(e,comments,user,comment_id) %}
+
+<h2 class="all title">Comments</h2>
+
+{% for c in comments %}
+	{% if comment_id == c.key().id() %}
+		<form method="post" class="half">
+			<textarea class="all" name="comment" rows="5" cols="35">{{c.comment}}</textarea>
+			<input type="submit" value="save">
+		</form>
+	{% else %}
+		<pre class="three-quarter comment">{{c.comment}}</pre>
+		<section class="quarter text-right">
+			Posted by {{c.posted_by}}<br>
+			{{c.created.strftime('%b %d, %Y')}}
+		</section>
+	{% endif %}
+
+	{% if user and c.posted_by == user.username and comment_id == 0 %}
+		
+		<form action="/{{e.key().id()}}/{{c.key().id()}}" class="half">
+			<input type="submit" value="edit" class="edit-button">
+		</form>
+		<form method="post" action="/delete/comment/{{c.key().id()}}" class="text-right half">
+			<input type="submit" name="delete" value="delete" class="delete-button">
+		</form>
+		
+	{% elif user and user.username in c.likes and comment_id == 0 %}
+		
+		<form action="/like/comment/{{c.key().id()}}" method="post">
+			{{ c.likes|length }} &#10084;
+			<input class="like-button" type="submit" name="like" value="unlike">
+		</form>
+			
+	{% elif user and user.username not in c.likes and comment_id == 0 %}
+		
+		<form action="/like/comment/{{c.key().id()}}" method="post">
+			{{ c.likes|length }} &#10084;
+			<input class="like-button" type="submit" name="like" value="like">
+		</form>
+		
+	{% endif %}
+	<hr class="all">
+{% endfor %}
+
+
+
+{% if user and comment_id == 0  %}
+
+<form method="post" class="half">
+	<textarea class="all" name="comment" rows="5" cols="35"></textarea>
+	<input type="submit" value="comment" class="comment-button">
+</form>
+
+{% endif %}
+
+{%- endmacro %}
+
+
+
+
+
+
+{%- macro summarypost(e,user) %}
+
+<section class="half title"><a href="/{{e.key().id()}}/0">{{e.title}}</a></section> 
+<section class="half text-right">
+	Posted by <a href="/postsby/{{e.posted_by}}">{{e.posted_by}}</a><br>
+	{{e.created.strftime('%b %d, %Y')}}<br>
+</section> 
+<section class="summary three-quarter">
+	{{e.summary}}
+</section>
+<section class="quarter text-right">
+	{{ e.likes|length }} &#10084;
+</section>
 <hr class="all">
 
 {%- endmacro %}
@@ -31,16 +118,20 @@
 
 <form method="post">
 	<h3>Title</h3>
-	<input id="title" type="text" name="subject" value="{{title}}"><br>
+	<input id="title" type="text" name="subject" value="{{title}}" size="45"><br>
 	<h3>Summary</h3>
-	<textarea type="text" name="summary" rows="10" cols="75">{{summary}}</textarea>
+	<textarea type="text" name="summary" rows="6" cols="75">{{summary}}</textarea>
 	<h3>Code</h3>
-	<textarea name="content" rows="25" cols="75">{{code}}</textarea>
+	<textarea name="content" rows="20" cols="95">{{code}}</textarea>
 	<br>
 	<div>
 		{{error_message}}
 	</div>
-	<input type="submit" name="">
+	<input type="submit" class="submit-button">
 </form>
 
 {%- endmacro %}
+
+
+
+
