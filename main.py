@@ -6,11 +6,14 @@ import re
 import logging
 import hashlib
 import time
+import random
+import string
+import datetime
 
 template_dir = os.path.join(os.path.dirname(__file__),'templates')
 jinja_env = jinja2.Environment(loader = jinja2.FileSystemLoader(template_dir),autoescape=True)
 
-secret = 'vjdnfjskygr8274592yuehdjbfab237y89123hdwjndka'
+secret = 'vjdnfjskygr8274592yuehdjbfab237y89123hdwjndka' + str(datetime.date.today())
 
 def render_str(template,**params):
 	t = jinja_env.get_template(template)
@@ -39,6 +42,21 @@ class Handler(webapp2.RequestHandler):
         hash_text = hashlib.sha256(str(some_text)+secret).hexdigest()
         return hash_text
 
+    def make_salt(self):
+        salt = ''
+        for i in range(0,5):
+            salt += random.choice(string.letters)
+        return salt
+
+    def hash_password(self,pswd):
+        salt = self.make_salt()
+        pw_hash = hashlib.sha256(str(pswd)+salt).hexdigest()
+        return pw_hash + '|' + salt
+
+    def verify_password(self,pswd,salt):
+        pw_hash = hashlib.sha256(str(pswd) + str(salt)).hexdigest()
+        return pw_hash
+
     def verify_cookie(self,val):
         val_a = val.split('|')
         if self.hash_str(val_a[0]) == val_a[1]:
@@ -53,6 +71,13 @@ class Handler(webapp2.RequestHandler):
                 u = User.get_by_id(int(verification),parent = None)
                 return u
 
+    def get_user(self):
+        u = self.check_id_cookie()
+        if u is not None:
+            return u
+        else:
+            self.redirect('/login')
+
     def set_secure_cookie(self,user_id):
         hash_id = self.hash_str(user_id)
         self.response.headers.add_header('Set-Cookie','user_id=%s|%s;PATH=/'%(user_id,hash_id))
@@ -65,11 +90,14 @@ class Handler(webapp2.RequestHandler):
 
     def add_recent_post(self,post):
         cookie_a = self.read_recent_cookie()
+        cookie = str(self.request.cookies.get('recent'))
+        logging.info(cookie_a)
         if cookie_a is None:
-            cookie = post
+            cookie = str(post)
         elif not post in cookie_a:
+            logging.info('second if ran')
             cookie = self.request.cookies.get('recent')
-            cookie = str(cookie + '|' + post)  
+            cookie = str(post + '|' + cookie)  
         self.response.headers.add_header('Set-Cookie','recent=%s;PATH=/'%cookie)
 
 class MainHandler(Handler):
@@ -80,14 +108,12 @@ class MainHandler(Handler):
 
 class Signup(Handler):
     def get(self):
-        cookie = self.request.cookies.get('user_id')
-        if cookie:
-            if self.verify_cookie(cookie):
-                self.redirect('/welcome')
-            else:
-                self.render('signup.html')
+        u = self.check_id_cookie()
+        if u is not None:
+            self.redirect('/welcome')
         else:
-            self.render('signup.html')
+            self.render('/signup.html')
+
 
     def post(self):
         username = self.request.get('username')
@@ -116,7 +142,8 @@ class Signup(Handler):
                 valid_form = False
 
         if valid_form:
-            hash_password = self.hash_str(password)
+            hash_password = self.hash_password(password)
+            logging.info(hash_password)
             new_user = User(username = username, password = hash_password, email = email,likes = [])
             new_user_key = new_user.put()
             user_id = new_user_key.id()
@@ -131,14 +158,16 @@ class Login(Handler):
         user_id = self.check_id_cookie()
         if user_id:
             self.redirect('/welcome')
-        self.render('/login.html')
+        else:
+            self.render('/login.html')
 
     def post(self):
         username = self.request.get('username')
         password = self.request.get('password')
         u = db.GqlQuery("select * from User where username = '%s'"%username).get()
         if u:
-            if self.hash_str(password) == u.password:
+            pw_hash = u.password.split('|')
+            if self.verify_password(password,pw_hash[1]) == pw_hash[0]:
                 logging.info('user is authenticated')
                 self.set_secure_cookie(u.key().id())
                 self.redirect('/welcome')
@@ -155,12 +184,10 @@ class Logout(Handler):
 
 class Welcome(Handler):
     def get(self):
-        u = self.check_id_cookie()
+        u = self.get_user()
         if u:
             posts = db.GqlQuery("select * from PostObject where posted_by = '%s' order by created desc"%u.username).fetch(limit=None)
-            self.render('welcome.html',user = u,posts = posts)
-        else:
-            self.redirect('/login')
+            self.render('welcome.html',user = u,posts = posts,title = 'Your Posts:')
 
 class PostsBy(Handler):
     def get(self,poster):
@@ -170,16 +197,11 @@ class PostsBy(Handler):
    
 class NewPost(Handler):
     def get(self):
-        u = self.check_id_cookie()
-        if u:
-            self.render('newpost.html',user = u)
-        else:
-            self.redirect('/login')
+        u = self.get_user()
+        self.render('newpost.html',user = u)
 
     def post(self):
-        u = self.check_id_cookie();
-        if not u:
-            self.redirect('/login')
+        u = self.get_user()
         title = self.request.get('subject')
         summary = self.request.get('summary')
         code = self.request.get('content')
@@ -195,17 +217,12 @@ class NewPost(Handler):
 
 class EditPost(Handler):
     def get(self,post_id):
-        u = self.check_id_cookie()
-        if not u:
-            redirect('/login')
+        u = self.get_user()
         e = PostObject.get_by_id(int(post_id))
         self.render('newpost.html',title = e.title,summary = e.summary, code = e.code, user = u)
 
     def post(self,post_id):
-        logging.info('post id is: '+post_id)
-        u = self.check_id_cookie()
-        if not u:
-            redirect('/login')
+        u = self.get_user()
         e = PostObject.get_by_id(int(post_id))
         title = self.request.get('subject')
         summary = self.request.get('summary')
@@ -223,9 +240,7 @@ class EditPost(Handler):
 
 class DeletePost(Handler):
     def post(self,type,post_id):
-        u = self.check_id_cookie()
-        if not u:
-            redirect('/login')
+        u = self.get_user()
         o = None
         e = False
         if type == 'post':
@@ -245,9 +260,7 @@ class DeletePost(Handler):
 
 class LikePost(Handler):
     def post(self,type,object_id):
-        u = self.check_id_cookie()
-        if not u:
-            self.redirect('/login')
+        u = self.get_user()
         o = None
         e = False
         if type == 'post':
@@ -271,11 +284,7 @@ class LikePost(Handler):
 
 class LikedPosts(Handler):
     def get(self):
-        u = self.check_id_cookie()
-        if u is None:
-            logging.info("checked for none and found none")
-            self.redirect('/login')
-            return None
+        u = self.get_user()
         posts = u.likes
         entries = []
         for post in posts:
@@ -303,16 +312,23 @@ class Entery(Handler):
         self.render('entery.html',e = e,user = u,comments = comments,comment_id = int(comment_id))
 
     def post(self,post_id,comment_id):
-        u = self.check_id_cookie()
-        if not u:
-            self.redirect('/login')
+        u = self.get_user()
         comment = self.request.get('comment')
+        logging.info(comment)
+        logging.info(post_id)
+        logging.info(u.username)
+        logging.info(comment_id)
         if comment:
-            if comment_id == 0:
+            logging.info('first loop')
+            if comment_id == '0':
+                logging.info('first loop 1')
                 c = CommentObject(comment = comment, post_id = post_id, posted_by = u.username, likes = [])
+                logging.info('first loop 2')
                 c.put()
+                logging.info('first loop 3')
                 time.sleep(.3)
             else:
+                logging.info('first loop 4')
                 c = CommentObject.get_by_id(int(comment_id))
                 c.comment = comment
                 c.put()
