@@ -7,10 +7,19 @@
 
 *{
 	font-family: 'Sahitya', serif;
-	
 }
+html {
+  height: 100%;
+}
+
 body{
 	background-image: url("05-white-brick.png");
+	  display: flex;
+	  flex-direction: column;
+	  min-height: 100%;
+}
+img{
+	margin-top: 10px;
 }
 
 h1{
@@ -32,16 +41,16 @@ textarea,input[type=text],input[type=password]{
 }
 
 footer{
-	margin: 10px;
+	margin-top: auto;
+	padding-bottom: 30px;
 }
 
 .container{
 	display: flex;
 	flex-wrap: wrap;
 	flex-direction: row;
-	/*padding-right: 15px;
-	padding-left: 15px;*/
-	padding-top: 10px;
+	margin-top: 0px;
+	padding-top: 5px;
 	padding-bottom: 30px;
 }
 

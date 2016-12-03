@@ -13,7 +13,7 @@ import datetime
 template_dir = os.path.join(os.path.dirname(__file__),'templates')
 jinja_env = jinja2.Environment(loader = jinja2.FileSystemLoader(template_dir),autoescape=True)
 
-secret = 'vjdnfjskygr8274592yuehdjbfab237y89123hdwjndka' + str(datetime.date.today())
+secret = 'vjdnfjskygr8274592yuehdjbfabbhbhgfhfhg237y89123hdwjndka' + str(datetime.date.today())
 
 def render_str(template,**params):
 	t = jinja_env.get_template(template)
@@ -41,6 +41,11 @@ class Handler(webapp2.RequestHandler):
     def hash_str(self,some_text):
         hash_text = hashlib.sha256(str(some_text)+secret).hexdigest()
         return hash_text
+
+    def initialize(self, *a, **kw):
+        webapp2.RequestHandler.initialize(self, *a, **kw)
+        uid = self.check_id_cookie()
+        self.u = uid
 
     def make_salt(self):
         salt = ''
@@ -73,10 +78,10 @@ class Handler(webapp2.RequestHandler):
 
     def get_user(self):
         u = self.check_id_cookie()
-        if u is not None:
-            return u
+        if u is None:
+            return self.redirect('/login')
         else:
-            self.redirect('/login')
+            return u
 
     def set_secure_cookie(self,user_id):
         hash_id = self.hash_str(user_id)
@@ -102,14 +107,12 @@ class Handler(webapp2.RequestHandler):
 
 class MainHandler(Handler):
     def get(self):
-        u = self.check_id_cookie()
-    	enteries = db.GqlQuery('select * from PostObject order by created desc').fetch(10)
-        self.render('main.html',enteries = enteries, user = u,title = 'Recent Posts:')
+    	enteries = db.GqlQuery('select * from PostObject order by created desc').fetch(limit=None)
+        self.render('main.html',enteries = enteries, user = self.u,title = 'Recent Posts:')
 
 class Signup(Handler):
     def get(self):
-        u = self.check_id_cookie()
-        if u is not None:
+        if self.u:
             self.redirect('/welcome')
         else:
             self.render('/signup.html')
@@ -128,17 +131,17 @@ class Signup(Handler):
             params['error_username'] = 'Username is already taken'
             valid_form = False
         if not valid_username(username):
-            params['error_username'] = 'Username is too short'
+            params['error_username'] = 'Your username should be between 3-20 characters/numbers'
             valid_form = False
         if not valid_password(password):
-            params['error_password'] = 'Password is too short'
+            params['error_password'] = 'Your password should be between 3-20 characters/numbers'
             valid_form = False
         if password != verify:
             params['error_verify'] = 'Passwords do not match'
             valid_form = False
         if email:
             if not valid_email(email):
-                params['error_email'] = 'Email is missing'
+                params['error_email'] = 'Not a valid email address'
                 valid_form = False
 
         if valid_form:
@@ -155,8 +158,7 @@ class Signup(Handler):
 
 class Login(Handler):
     def get(self):
-        user_id = self.check_id_cookie()
-        if user_id:
+        if self.u:
             self.redirect('/welcome')
         else:
             self.render('/login.html')
@@ -164,12 +166,12 @@ class Login(Handler):
     def post(self):
         username = self.request.get('username')
         password = self.request.get('password')
-        u = db.GqlQuery("select * from User where username = '%s'"%username).get()
-        if u:
-            pw_hash = u.password.split('|')
+        user = db.GqlQuery("select * from User where username = '%s'"%username).get()
+        if user:
+            pw_hash = user.password.split('|')
             if self.verify_password(password,pw_hash[1]) == pw_hash[0]:
                 logging.info('user is authenticated')
-                self.set_secure_cookie(u.key().id())
+                self.set_secure_cookie(user.key().id())
                 self.redirect('/welcome')
             else:
                 self.render('login.html',username = username,error = 'Invalid username and/or password')
@@ -184,156 +186,181 @@ class Logout(Handler):
 
 class Welcome(Handler):
     def get(self):
-        u = self.get_user()
-        if u:
-            posts = db.GqlQuery("select * from PostObject where posted_by = '%s' order by created desc"%u.username).fetch(limit=None)
-            self.render('welcome.html',user = u,posts = posts,title = 'Your Posts:')
+        if self.u:
+            posts = db.GqlQuery("select * from PostObject where posted_by = '%s' order by created desc"%self.u.username).fetch(limit=None)
+            self.render('main.html',user = self.u,enteries = posts,title = 'Your Posts:')
+        else:
+            self.redirect('/login')
 
 class PostsBy(Handler):
     def get(self,poster):
         user = self.check_id_cookie()
         posts = db.GqlQuery("select * from PostObject where posted_by = '%s' order by created desc"%poster).fetch(limit=None)
-        self.render('postsby.html',posts = posts,user = user,title = 'Posts by '+poster)
+        self.render('main.html',enteries = posts,user = user,title = 'Posts by '+poster)
    
 class NewPost(Handler):
     def get(self):
-        u = self.get_user()
-        self.render('newpost.html',user = u)
+        if self.u:
+            self.render('newpost.html',user = self.u,e = None)
+        else:
+            self.redirect('/login')
 
     def post(self):
-        u = self.get_user()
-        title = self.request.get('subject')
-        summary = self.request.get('summary')
-        code = self.request.get('content')
-        
-        if title and code and summary:
-            new_entery = PostObject(title = title,summary = summary,code = code,posted_by = u.username,likes = [])
-            key = new_entery.put()
-            entry_id = '/' + str(key.id()) + '/0'
-            logging.info(entry_id)
-            self.redirect(entry_id)
+        if self.u:
+            title = self.request.get('subject')
+            summary = self.request.get('summary')
+            code = self.request.get('content')
+            
+            if title and code and summary:
+                new_entery = PostObject(title = title,summary = summary,code = code,posted_by = self.u.username,likes = [])
+                key = new_entery.put()
+                entry_id = '/' + str(key.id()) + '/0'
+                logging.info(entry_id)
+                self.redirect(entry_id)
+            else:
+                self.render('newpost.html',error_message = 'All fields are required!',title = title,summary = summary,code = code,user = self.u)
         else:
-            self.render('newpost.html',error_message = 'All fields are required!',title = title,summary = summary,code = code,user = u)
+            self.redirect('/login')
 
 class EditPost(Handler):
     def get(self,post_id):
-        u = self.get_user()
-        e = PostObject.get_by_id(int(post_id))
-        self.render('newpost.html',title = e.title,summary = e.summary, code = e.code, user = u)
+        if self.u:
+            e = PostObject.get_by_id(int(post_id))
+            if self.u.username == e.posted_by:
+                self.render('newpost.html',e = e, user = self.u)
+            else:
+                self.redirect('../'+post_id+'/0')
+        else:
+                self.redirect('../'+post_id+'/0')
 
     def post(self,post_id):
-        u = self.get_user()
-        e = PostObject.get_by_id(int(post_id))
-        title = self.request.get('subject')
-        summary = self.request.get('summary')
-        code = self.request.get('content')
+        if self.u:
+            e = PostObject.get_by_id(int(post_id))
+            title = self.request.get('subject')
+            summary = self.request.get('summary')
+            code = self.request.get('content')
 
-        if title and code and summary:
-            e.title = title
-            e.summary = summary
-            e.code = code
-            e.posted_by = u.username
-            e.put()
-            self.redirect('../'+post_id+'/0')
+            if title and code and summary:
+                e.title = title
+                e.summary = summary
+                e.code = code
+                e.posted_by = self.u.username
+                e.put()
+                self.redirect('../'+post_id+'/0')
+            else:
+                self.render('newpost.html',error_message = 'All fields are required!',title = title,summary = summary,code = code,user = self.u)
         else:
-            self.render('newpost.html',error_message = 'All fields are required!',title = title,summary = summary,code = code,user = u)
+            self.redirect('/login')
 
 class DeletePost(Handler):
     def post(self,type,post_id):
-        u = self.get_user()
-        o = None
-        e = False
-        if type == 'post':
-            o = PostObject.get_by_id(int(post_id))
-            comments = db.GqlQuery("select * from CommentObject where post_id = '%s'"%post_id).fetch(limit=None)
-            for c in comments:
-                c.delete()
-        elif type == 'comment':
-            o = CommentObject.get_by_id(int(post_id))
-            e = PostObject.get_by_id(int(o.post_id))
-        o.delete()
-        time.sleep(0.3)
-        if e:
-            self.redirect('/'+str(e.key().id())+'/0')
+        if self.u:
+            o = None
+            e = False
+            if type == 'post':
+                o = PostObject.get_by_id(int(post_id))
+                if o.posted_by == self.u.username:
+                    comments = db.GqlQuery("select * from CommentObject where post_id = '%s'"%post_id).fetch(limit=None)
+                    for c in comments:
+                        c.delete()
+                    o.delete()
+                else:
+                    self.redirect('/'+post_id+'/0')
+            elif type == 'comment':
+                o = CommentObject.get_by_id(int(post_id))
+                e = PostObject.get_by_id(int(o.post_id))
+                if o.posted_by == self.u.username:
+                    o.delete()
+                else:
+                    self.redirect('/'+e.post_id+'/0')
+            time.sleep(0.3)
+            if e:
+                self.redirect('/'+str(e.key().id())+'/0')
+            else:
+                self.redirect('/welcome')
         else:
-            self.redirect('/welcome')
+            self.redirect('/login')
 
 class LikePost(Handler):
     def post(self,type,object_id):
-        u = self.get_user()
-        o = None
-        e = False
-        if type == 'post':
-            o = PostObject.get_by_id(int(object_id))
-        elif type == 'comment':
-            o = CommentObject.get_by_id(int(object_id))
-            e = PostObject.get_by_id(int(o.post_id))
-        if u.username in o.likes:
-            o.likes.remove(u.username)
-            u.likes.remove(str(object_id))
+        if self.u:
+            o = None
+            e = False
+            if type == 'post':
+                o = PostObject.get_by_id(int(object_id))
+            elif type == 'comment':
+                o = CommentObject.get_by_id(int(object_id))
+                e = PostObject.get_by_id(int(o.post_id))
+            if self.u.username in o.likes:
+                o.likes.remove(self.u.username)
+                self.u.likes.remove(str(object_id))
+            else:
+                o.likes.append(self.u.username)
+                self.u.likes.append(str(object_id))
+            o.put()
+            self.u.put()
+            time.sleep(0.3)
+            if e:
+                self.redirect('/'+str(e.key().id())+'/0')
+            else:
+                self.redirect('/'+object_id+'/0')
         else:
-            o.likes.append(u.username)
-            u.likes.append(str(object_id))
-        o.put()
-        u.put()
-        time.sleep(0.3)
-        if e:
-            self.redirect('/'+str(e.key().id())+'/0')
-        else:
-            self.redirect('/'+object_id+'/0')
+            self.redirect('/login')
 
 class LikedPosts(Handler):
     def get(self):
-        u = self.get_user()
-        posts = u.likes
-        entries = []
-        for post in posts:
-            entries.append(PostObject.get_by_id(int(post)))
-            logging.info(entries)
-        self.render('/main.html',enteries = entries, user = u,title = 'Liked Posts:')
+        if self.u:
+            posts = self.u.likes
+            entries = []
+            for post in posts:
+                e = PostObject.get_by_id(int(post))
+                if e is not None:
+                    entries.append(e)
+                    logging.info(entries)
+            self.render('/main.html',enteries = entries, user = self.u,title = 'Liked Posts:')
+        else:
+            self.redirect('/login')
 
 class RecentPosts(Handler):
     def get(self):
-        u = self.check_id_cookie()
         posts = self.read_recent_cookie()
         entries = []
         if posts is not None:
             for post in posts:
-                entries.append(PostObject.get_by_id(int(post)))
-                logging.info(entries)
-        self.render('/main.html',enteries = entries, user = u,title = 'Recently Viewed:')
+                e = PostObject.get_by_id(int(post))
+                if e is not None:
+                    entries.append(e)
+                    logging.info(entries)
+        self.render('/main.html',enteries = entries, user = self.u,title = 'Recently Viewed:')
         
 class Entery(Handler):
     def get(self,post_id,comment_id):
-        u = self.check_id_cookie()
         self.add_recent_post(str(post_id))
         e = PostObject.get_by_id(int(post_id))
         comments = db.GqlQuery("select * from CommentObject where post_id = '%s' order by created"%post_id).fetch(limit=None)
-        self.render('entery.html',e = e,user = u,comments = comments,comment_id = int(comment_id))
+        self.render('entery.html',e = e,user = self.u,comments = comments,comment_id = int(comment_id))
 
     def post(self,post_id,comment_id):
-        u = self.get_user()
-        comment = self.request.get('comment')
-        logging.info(comment)
-        logging.info(post_id)
-        logging.info(u.username)
-        logging.info(comment_id)
-        if comment:
-            logging.info('first loop')
-            if comment_id == '0':
-                logging.info('first loop 1')
-                c = CommentObject(comment = comment, post_id = post_id, posted_by = u.username, likes = [])
-                logging.info('first loop 2')
-                c.put()
-                logging.info('first loop 3')
-                time.sleep(.3)
-            else:
-                logging.info('first loop 4')
-                c = CommentObject.get_by_id(int(comment_id))
-                c.comment = comment
-                c.put()
-                time.sleep(0.3)
-        self.redirect('/'+post_id+'/0')
+        if self.u:
+            comment = self.request.get('comment')
+            if comment:
+                logging.info('first loop')
+                if comment_id == '0':
+                    logging.info('first loop 1')
+                    c = CommentObject(comment = comment, post_id = post_id, posted_by = self.u.username, likes = [])
+                    logging.info('first loop 2')
+                    c.put()
+                    logging.info('first loop 3')
+                    time.sleep(.3)
+                else:
+                    logging.info('first loop 4')
+                    c = CommentObject.get_by_id(int(comment_id))
+                    c.comment = comment
+                    c.put()
+                    time.sleep(0.3)
+            self.redirect('/'+post_id+'/0')
+        else:
+            self.redirect('/login')
 
 class CommentObject(db.Model):
     comment = db.TextProperty(required = True)
