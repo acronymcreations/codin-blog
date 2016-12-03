@@ -1,4 +1,6 @@
+{# All macros used in the site #}
 
+{# Used to display the actual post content of a blog post as well as all relevent buttons #}
 {% macro post(e,user) -%}
 
 <pre class="all code">{{e.code}}</pre>
@@ -32,7 +34,7 @@
 
 
 
-
+{# Used to display all comments for a blog post as well as all relevent buttons #}
 {%- macro comment(e,comments,user,comment_id) %}
 
 <h2 class="all title">Comments</h2>
@@ -95,7 +97,7 @@
 
 
 
-
+{# Used to display just the title and summary of a post #}
 {%- macro summarypost(e,user) %}
 
 <section class="half title"><a href="/{{e.key().id()}}/0">{{e.title}}</a></section> 
@@ -113,7 +115,7 @@
 
 {%- endmacro %}
 
-
+{# Used to display the form used fro creating a new post or editing a post #}
 {% macro editpost(e='',error_message='') -%}
 
 <form method="post" class="all">
