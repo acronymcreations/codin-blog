@@ -17,7 +17,7 @@ jinja_env = jinja2.Environment(loader = jinja2.FileSystemLoader(template_dir),au
 # Random string used to hash with user ID to make and set secure cookies
 # Part of the string is a date-stamp so secret key changes daily, however, this prevents the use of
 # a 'Remember Me' checkbox
-secret = 'vjdnfjskygr8274548957243984hgfhfhg237y89123hdwjndka' + str(datetime.date.today())
+secret = 'vjdnfjskygr82745489572439hjkjhk84hgfhfhg237y89123hdwjndka' + str(datetime.date.today())
 
 # Helper method used to render a page
 def render_str(template,**params):
