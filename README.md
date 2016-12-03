@@ -1,5 +1,7 @@
 # Codin-Blog
 
+Codin-Blog is a venue for beginners or pros to post their code for others to review and provide feedback. As a high school computer science teacher, I hope to use this site in my class to help students colaborate with eachother better.
+
 ## Quick Start
 #### A live version of this project is available at http://codin-blog.appspot.com/
 
