@@ -55,10 +55,11 @@
 
 	{% if user and c.posted_by == user.username and comment_id == 0 %}
 		
-		<form action="/{{e.key().id()}}/{{c.key().id()}}" class="half">
+		<form action="/{{e.key().id()}}/{{c.key().id()}}" class="third">
 			<input type="submit" value="edit" class="edit-button">
 		</form>
-		<form method="post" action="/delete/comment/{{c.key().id()}}" class="text-right half">
+		<section class="third text-center">{{ c.likes|length }} &#10084;</section>
+		<form method="post" action="/delete/comment/{{c.key().id()}}" class="text-right third">
 			<input type="submit" name="delete" value="delete" class="delete-button">
 		</form>
 		
