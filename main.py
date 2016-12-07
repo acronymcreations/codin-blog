@@ -387,7 +387,7 @@ class DeletePost(Handler):
                 o = CommentObject.get_by_id(int(post_id))
                 e = PostObject.get_by_id(int(o.post_id))
                 # Verifies the comment was authored by the current user
-                if o and c and o.posted_by == self.u.username:
+                if o and e and o.posted_by == self.u.username:
                     o.delete()
                 else:
                     self.redirect('/' + e.post_id + '/0')
