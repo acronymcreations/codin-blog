@@ -19,7 +19,7 @@ jinja_env = jinja2.Environment(loader=jinja2.FileSystemLoader(template_dir),
 # Part of the string is a date-stamp so secret key changes daily,
 # however, this prevents the use of
 # a 'Remember Me' checkbox
-secret = 'vjdnfjskygr82745489572439hjkjhk84hgfhfhg237y89123hdwjndka' \
+secret = 'vjdnfjskygr82745489572nlkl76574578ohgfh0896757rfgjdfdfhg237y89123hdwjndka' \
     + str(datetime.date.today())
 
 
@@ -292,8 +292,10 @@ class NewPost(Handler):
             # In my future rollout I would like to use something like 'bleach'
             # to further protect against code injection.
             if title and code and summary:
-                new_entery = PostObject(title=title, summary=summary,
-                                        code=code, posted_by=self.u.username,
+                new_entery = PostObject(title=title,
+                                        summary=summary,
+                                        code=code,
+                                        posted_by=self.u.username,
                                         likes=[])
                 key = new_entery.put()
                 entry_id = '/' + str(key.id()) + '/0'
@@ -318,7 +320,7 @@ class EditPost(Handler):
             # Grabs the post from the DB
             e = PostObject.get_by_id(int(post_id))
             # Verifies that the post was posted by the current user
-            if self.u.username == e.posted_by:
+            if e and self.u.username == e.posted_by:
                 # Loads the data into the form to allow editing
                 self.render('newpost.html', e=e, user=self.u)
             else:
@@ -333,7 +335,7 @@ class EditPost(Handler):
             title = self.request.get('subject')
             summary = self.request.get('summary')
             code = self.request.get('content')
-            if e.posted_by == self.u.username:
+            if e and e.posted_by == self.u.username:
                 # Checks if data is valid
                 # Would like to use something like bleach in future updates
                 if title and code and summary:
@@ -368,7 +370,7 @@ class DeletePost(Handler):
                 # Grabs the PostObject to delete
                 o = PostObject.get_by_id(int(post_id))
                 # Verifies the author is the current user
-                if o.posted_by == self.u.username:
+                if o and o.posted_by == self.u.username:
                     # Grabs all comments from this blog post
                     # and deletes them and then deletes the PostObject
                     comments = db.GqlQuery("select * from CommentObject " +
@@ -385,7 +387,7 @@ class DeletePost(Handler):
                 o = CommentObject.get_by_id(int(post_id))
                 e = PostObject.get_by_id(int(o.post_id))
                 # Verifies the comment was authored by the current user
-                if o.posted_by == self.u.username:
+                if o and c and o.posted_by == self.u.username:
                     o.delete()
                 else:
                     self.redirect('/' + e.post_id + '/0')
@@ -416,7 +418,7 @@ class LikePost(Handler):
             elif type == 'comment':
                 o = CommentObject.get_by_id(int(object_id))
                 e = PostObject.get_by_id(int(o.post_id))
-            if self.u.username != o.posted_by:
+            if o and self.u.username != o.posted_by:
                 # Checks to see if the user has already
                 # liked the post. If so, it 'unlikes' it by
                 # removing their name from the 'like' list.
@@ -453,7 +455,8 @@ class LikedPosts(Handler):
             for post in posts:
                 # Grabs the post from the DB
                 e = PostObject.get_by_id(int(post))
-                # Filters out all of the comments
+                # Filters out all of the comments and posts that may have been
+                # deleted
                 if e is not None:
                     entries.append(e)
                     logging.info(entries)
@@ -494,15 +497,20 @@ class Entery(Handler):
         self.add_recent_post(str(post_id))
         # Gets the current blog post and all of its comments
         e = PostObject.get_by_id(int(post_id))
-        comments = db.GqlQuery("select * from CommentObject " +
-                               "where post_id = '%s' order by created"
-                               % post_id).fetch(limit=None)
-        # renders the page
-        self.render('entery.html',
-                    e=e,
-                    user=self.u,
-                    comments=comments,
-                    comment_id=int(comment_id))
+        if e:
+            comments = db.GqlQuery("select * from CommentObject " +
+                                   "where post_id = '%s' order by created"
+                                   % post_id).fetch(limit=None)
+            # renders the page
+            self.render('entery.html',
+                        e=e,
+                        user=self.u,
+                        comments=comments,
+                        comment_id=int(comment_id))
+        else:
+            self.render('main.html',
+                        user=self.u,
+                        title='Unable to find post :(')
 
     # Handles posting/editing comments to a blog post
     def post(self, post_id, comment_id):
@@ -524,10 +532,10 @@ class Entery(Handler):
                     time.sleep(.3)
                 # Editing an existing comment
                 else:
-                    # Gets comment and verifies that its author
+                    # Gets comment, verifies it exists, and verifies that its author
                     # is the current user
                     c = CommentObject.get_by_id(int(comment_id))
-                    if c.posted_by == self.u.username:
+                    if c and c.posted_by == self.u.username:
                         # Updates the comment and saves it
                         c.comment = comment
                         c.put()
